@@ -3,7 +3,7 @@ from bme280 import BME280
 from sh1106 import SH1106_I2C
 import time
 
-def display(temperature, humidity, preasure, status):
+def display(temperature, humidity, preasure, status,threshold):
     i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=100_000)
     oled = SH1106_I2C(i2c)
 
@@ -12,6 +12,7 @@ def display(temperature, humidity, preasure, status):
     oled.text("humidity: {:.1f}".format(humidity), 0, 12)
     oled.text("pressure: {:.1f}".format(preasure), 0, 24)
     oled.text(status, 0, 36)
+    oled.text("limit: {:.1f}".format(threshold), 0, 48)
     oled.show()
 
 
@@ -19,27 +20,52 @@ def main():
     i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=100_000)
     address = 0x76
     relay = Pin(27, Pin.OUT)
-
+    clk = Pin(10, Pin.IN, Pin.PULL_UP)
+    dt = Pin(11, Pin.IN, Pin.PULL_UP)  
+    sw = Pin(12, Pin.IN, Pin.PULL_UP) 
+    threshold = 25.3 
+    step = 0.5  
+    last_clk = clk.value()  
+    counter = 0  
     if address not in i2c.scan():
         raise OSError(f"BME280 at {address:#04x} was not detected")
 
     sensor = BME280(i2c)
+    temperature, humidity, pressure, _ = sensor.read_values()   
+    last_read = time.ticks_ms()                                 
     print("Reading BME280; press Ctrl+C to stop.")
 
     try:
         while True:
+            now_clk = clk.value()                                            # aktualni stav CLK
+            if now_clk != last_clk and now_clk == 0:                         # CLK se zmenil a klesl na 0 = jeden step
+                if dt.value() == 1:                                          # DT = 1 -> otaceno jednim smerem
+                    threshold += step                                        # prah nahoru
+                else:                                                        # DT = 0 -> otaceno druhym smerem
+                    threshold -= step                                        # prah dolu
+                print(f"Threshold: {threshold:.1f} C")
+                display(temperature, humidity, pressure, "SET", threshold)   # přepsání displeje 
+            last_clk = now_clk                                               #pamatování stavu 
+            if sw.value() == 0:                                              # 0 = tlacitko je stisknute
+                threshold = 25.3                                             # vratit vychozi hodnotu
+                print(f"Threshold reset: {threshold:.1f} C")
+                display(temperature, humidity, pressure, "SET", threshold)
+                time.sleep_ms(300)                   
+            counter += 1                                                     # kazdy pruchod smyckou zvysi pocitadlo
+            if counter >= 1000:                                              # 1000 x 2 ms = zhruba 2 sekundy
+                counter = 0                                                  # vynulovat a zmerit znovu
             temperature, humidity, pressure, _ = sensor.read_values()
             print(
                 f"Temperature: {temperature:.1f} C  "
                 f"Humidity: {humidity:.1f} %  "
                 f"Pressure: {pressure:.1f} hPa"
             )
-            display(temperature,humidity,pressure,"ON")
-            if temperature >= 25.3:
+            display(temperature,humidity,pressure,"ON",threshold)
+            if temperature >= threshold:
                 relay.value(1)
             else:
                 relay.value(0)
-            time.sleep(2)
+            time.sleep_ms(2)
     except KeyboardInterrupt:
         print("\nProgram stopped. Exiting...")
         relay.value(0)
