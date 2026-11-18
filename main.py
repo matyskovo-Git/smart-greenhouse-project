@@ -19,7 +19,7 @@ def display(oled,temperature, humidity, preasure, status, threshold):
     oled.text("humidity: {:.1f}".format(humidity), 0, 12)
     oled.text("pressure: {:.1f}".format(preasure), 0, 24)
     oled.text(status, 0, 36)
-    oled.text("limit: {:.1f}".format(threshold), 0, 48)
+    oled.text("threshold: {:.1f}".format(threshold), 0, 48)
     oled.show()
 
 
@@ -50,7 +50,7 @@ def main():
     dt = Pin(11, Pin.IN, Pin.PULL_UP)  
     sw = Pin(12, Pin.IN, Pin.PULL_UP) 
 
-    threshold = 25.3 
+    threshold = 25 
     step = 0.5  
     last_clk = clk.value()  
 
@@ -59,10 +59,10 @@ def main():
 
     if temperature >= threshold:
         relay.value(1)
-        fanStatus = "ON"
+        fanStatus = "FAN ON"
     elif temperature <= threshold - FAN_HYSTERESIS:
         relay.value(0)
-        fanStatus = "OFF"
+        fanStatus = "FAN OFF"
 
     display(oled,temperature, humidity, pressure, fanStatus, threshold)                             
     print("Reading BME280; press Ctrl+C to stop.")
@@ -72,20 +72,22 @@ def main():
         while True:
             # aktualni stav CLK
             now_clk = clk.value()    
-
-            if now_clk != last_clk and now_clk == 0:                         # CLK se zmenil a klesl na 0 = jeden step
-                if dt.value() == 1:                                          # DT = 1 -> otaceno jednim smerem
+            if now_clk != last_clk :                         # CLK se zmenil a klesl na 0 = jeden step  
+                if dt.value() == last_clk:                                          # DT = 1 -> otaceno jednim smerem
                     threshold += step                                        # prah nahoru
-                else:                                                        # DT = 0 -> otaceno druhym smerem
+                else:                                        # DT = 0 -> otaceno druhym smerem
                     threshold -= step                                        # prah dolu
                 print(f"Threshold: {threshold:.1f} C")
                 display(oled, temperature, humidity, pressure, "THRESHOLD SET", threshold)      # přepsání displeje 
-            last_clk = now_clk                                                                  # pamatování stavu 
-                                                                         
+                                                                             # pamatování stavu 
+            
+            last_clk = now_clk
+            
+
             if sw.value() == 0:                                              # 0 = tlacitko je stisknute
-                threshold = 25.3                                             # vratit vychozi hodnotu
+                threshold = 25                                            	 # vratit vychozi hodnotu
                 print(f"Threshold reset: {threshold:.1f} C")
-                display(oled,temperature, humidity, pressure, "RESET", threshold)
+                display(oled,temperature, humidity, pressure, "RESET THRESHOLD", threshold)
                 time.sleep_ms(300)                   
 
             # porovnání aktuálního času s posledním čtením, pokud je rozdíl větší než 5s provede se čtení senzoru
@@ -98,10 +100,10 @@ def main():
             # spousteni ventilatoru pres rele s hysterezi 
             if temperature >= threshold:
                 relay.value(1)
-                fanStatus = "ON"
+                fanStatus = "FAN ON"
             elif temperature <= threshold - FAN_HYSTERESIS:
                 relay.value(0)
-                fanStatus = "OFF"
+                fanStatus = "FAN OFF"
 
             if newReading: 
                 display(oled,temperature, humidity, pressure, fanStatus, threshold)
@@ -111,7 +113,7 @@ def main():
                         f"Pressure: {pressure:.1f} hPa"
                     )
 
-            time.sleep_ms(2)
+            
 
 
     except KeyboardInterrupt:
