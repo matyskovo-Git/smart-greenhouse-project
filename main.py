@@ -71,16 +71,37 @@ def main():
     try:
         while True:
             # aktualni stav CLK
-            now_clk = clk.value()    
-            if now_clk != last_clk :                         # CLK se zmenil a klesl na 0 = jeden step  
-                if dt.value() == last_clk:                                          # DT = 1 -> otaceno jednim smerem
-                    threshold += step                                        # prah nahoru
-                else:                                        # DT = 0 -> otaceno druhym smerem
-                    threshold -= step                                        # prah dolu
-                print(f"Threshold: {threshold:.1f} C")
-                display(oled, temperature, humidity, pressure, "THRESHOLD SET", threshold)      # přepsání displeje 
-                                                                             # pamatování stavu 
+            now_clk = clk.value()
+
+            #registrujeme zmenu encoderu
+            if now_clk != last_clk:
+                
+                #ked sa zmeni poloha encoderu a knoflik neni zmacknuty ideme do loopu                           
+                while sw.value() == 1:
+                    #V tomto loope ak detekujeme znovu zmenu polohy encoderu dokym nezmackneme knoflik vtedy sa nam threshold setne a ideme von z loopu                            
+                    print("Setting threshold")
+                    
+                    #aktualny stav clk v loope na detekovanie novej polohy encoderu v loope
+                    now_clk = clk.value()
+                    
+                    if now_clk != last_clk:
+                        #bread and butter otacanie encoderu
+                        if dt.value() == last_clk:                                          
+                            threshold += step                                        
+                        else:                                        
+                            threshold -= step                                        
+                        print(f"Threshold: {threshold:.1f} C")
+
+                    #ulozenie clk na detekovanie
+                    last_clk = now_clk
+
+                    #prerusenie loopu
+                    if sw.value() == 0:
+                        display(oled, temperature, humidity, pressure, "THRESHOLD SET", threshold)       
+                        print("Threshold set!")
+                        break
             
+            #ulozenie clk na detekovanie
             last_clk = now_clk
             
 
