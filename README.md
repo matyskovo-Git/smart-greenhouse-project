@@ -1,53 +1,61 @@
 # Chytrý skleník
 
-Týmový projekt pro Raspberry Pi Pico W a MicroPython. Zařízení má zobrazovat teplotu a vlhkost ve skleníku a automaticky spínat 5V ventilátor přes reléový modul. Teplotní hranici pro sepnutí nastaví uživatel otočným enkodérem.
+Týmový projekt pro Raspberry Pi Pico W a MicroPython. Zařízení měří teplotu, relativní vlhkost a atmosférický tlak pomocí BME280. Naměřené hodnoty zobrazuje na OLED a podle teploty automaticky spíná 5V ventilátor přes reléový modul.
 
 ## Tým
 
 | Členové týmu |
 | --- |
-| Pavel Hroch | 
-| Jerguš Gecík | 
-| Matouš Huczala | 
+| Pavel Hroch |
+| Jerguš Gecík |
+| Matouš Huczala |
 
-## Stav po prvním týdnu
+## Obsluha a řízení ventilátoru
 
-V `main.py` je první verze programu. Kód každé dvě sekundy čte teplotu, vlhkost a tlak z BME280, vypisuje údaje do konzole a zobrazuje je na OLED. Při teplotě alespoň 25,3 °C nastaví výstup GP27 na logickou 1, při nižší teplotě na 0.
+Při zachycení sestupné hrany signálu `CLK` z enkodéru program změní teplotní práh o 0,5 °C. Práh se zvýší, když je `DT` v logické 1, a sníží, když je `DT` v logické 0. Stisk tlačítka enkodéru vrátí práh na výchozích 25,3 °C.
 
-Teplotní hranice je pevně zadaná v kódu. OLED zatím zobrazuje text `ON` bez ohledu na hodnotu výstupu. Nastavení hranice otočným enkodérem a zobrazení stavu ventilátoru přibudou při integraci.
+OLED zobrazuje naměřené hodnoty, aktuální práh a stav sepnutí. Při změně prahu ukáže `THRESHOLD SET` a při resetu `RESET`. K zobrazení `ON` nebo `OFF` se vrací při dalším měření.
 
-## Hardware a plán zapojení
+Ventilátor se zapíná při dosažení nastaveného prahu a vypíná při poklesu o 0,5 °C pod něj. Při výchozím prahu 25,3 °C platí následující hodnoty.
+
+| Naměřená teplota | Stav ventilátoru |
+| --- | --- |
+| 25,3 °C a více | Zapnutý |
+| Mezi 24,8 °C a 25,3 °C | Zachová předchozí stav |
+| 24,8 °C a méně | Vypnutý |
+
+Hystereze omezuje opakované spínání relé při malých změnách teploty kolem prahu.
+
+## Hardware a zapojení
 
 | Část | Nastavení nebo připojení |
 | --- | --- |
 | Raspberry Pi Pico W | MicroPython |
-| BME280 | I²C0, ověřovaná adresa `0x76` |
-| OLED s řadičem SH1106 | Stejná I²C sběrnice jako BME280, adresu ověříme |
 | Sběrnice I²C0 | SDA na GP4, SCL na GP5, 100 kHz |
-| Reléový modul | Řídicí signál na GP27 |
+| BME280 | I²C0, očekávaná adresa `0x76` |
+| OLED s řadičem SH1106 | I²C0, očekávaná adresa `0x3C` |
+| Otočný enkodér | CLK na GP10, DT na GP11, SW na GP12 |
+| Reléový modul | Řídicí signál na GP27, program při požadavku na sepnutí nastaví logickou 1 |
 | 5V ventilátor | Napájení z 5V vývodu Pico W přes kontakt reléového modulu |
-| Otočný enkodér | Plánované nastavení teplotní hranice |
 
-## Návrh architektury
-
-```mermaid
-flowchart TD
-    BME["BME280"] -->|"teplota, vlhkost a tlak přes I²C"| PICO["Raspberry Pi Pico W"]
-    ENCODER["Otočný enkodér"] -->|"nastavení teplotní hranice"| PICO
-    PICO -->|"hodnoty a stav ventilátoru přes I²C"| OLED["OLED SH1106"]
-    PICO -->|"řídicí signál GP27"| RELAY["Reléový modul"]
-    PICO -->|"5V napájecí větev"| CONTACT["Spínací kontakt relé"]
-    RELAY -->|"sepnutí"| CONTACT
-    CONTACT -->|"spínané napájení"| FAN["5V ventilátor"]
-```
-
-Pico W porovnává naměřenou teplotu s hranicí nastavenou enkodérem. Řídicí signál GP27 ovládá reléový modul. Jeho kontakt spíná napájecí větev ventilátoru. OLED má zobrazovat naměřené hodnoty, nastavenou hranici a stav spínání.
-
-### Plán časování
+### Časování
 
 | Činnost | Kdy probíhá |
 | --- | --- |
-| Čtení BME280 | Přibližně každých 5 s |
+| Čtení BME280 | Při startu, potom přibližně každých 5 s |
 | Obsluha enkodéru | Průběžně, i mezi měřeními |
-| Vyhodnocení spínání relé | Po novém měření nebo po změně teplotní hranice |
-| Aktualizace OLED | Při změně zobrazených hodnot, hranice nebo stavu spínání |
+| Vyhodnocení stavu relé | V každém průchodu smyčkou podle poslední změřené teploty a aktuálního prahu |
+| Aktualizace OLED | Při startu, novém měření, otočení enkodéru nebo resetu prahu |
+
+## Architektura
+
+```mermaid
+flowchart TD
+    BME["BME280"] -->|"Teplota, vlhkost a tlak přes I²C"| PICO["Raspberry Pi Pico W"]
+    ENCODER["Otočný enkodér"] -->|"Nastavení teplotního prahu"| PICO
+    PICO -->|"Hodnoty a stav sepnutí přes I²C"| OLED["OLED SH1106"]
+    PICO -->|"Řídicí signál GP27"| RELAY["Reléový modul"]
+    PICO -->|"5V napájecí větev"| CONTACT["Spínací kontakt relé"]
+    RELAY -->|"Sepnutí"| CONTACT
+    CONTACT -->|"Spínané napájení"| FAN["5V ventilátor"]
+```
