@@ -3,6 +3,10 @@ from bme280 import BME280
 from sh1106 import SH1106_I2C
 from micropython import const
 import time
+import network
+import urequests
+import wifi_utils
+import config
 
 # KONSTANY
 # nastavení periody čtení BM280 čidla
@@ -12,6 +16,9 @@ FAN_HYSTERESIS = const(0.5)
 # adresy I2C periferii 
 BME280_ADDRESS = const(0x76)
 OLED_ADDRESS = const(0x3C)
+
+#url toho co budeme pouzivat
+API_URL = "https://api.thingspeak.com/update"
 
 def display(oled,temperature, humidity, preasure, status, threshold):
     oled.fill(0)
@@ -26,6 +33,8 @@ def display(oled,temperature, humidity, preasure, status, threshold):
 def main():
     # I2C
     i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=100_000)
+    
+    wifi = network.WLAN(network.STA_IF)
 
     # kontrola I2C adres 
     adresses = i2c.scan()
@@ -70,6 +79,12 @@ def main():
 
     try:
         while True:
+            
+            if not wifi.isconnected():
+                if not wifi_utils.connect(wifi, config.SSID, config.PSWD):
+                    time.sleep(20)
+                    continue
+            
             # aktualni stav CLK
             now_clk = clk.value()
 
@@ -117,6 +132,7 @@ def main():
             if newReading:
                 temperature, humidity, pressure, _ = sensor.read_values()
                 last_read = now
+                
 
             # spousteni ventilatoru pres rele s hysterezi 
             if temperature >= threshold:
@@ -133,6 +149,26 @@ def main():
                         f"Humidity: {humidity:.1f} %  "
                         f"Pressure: {pressure:.1f} hPa"
                     )
+                body = (
+                     
+                        f"api_key={NIEKOHO API KEY}"
+                        f"&field1={temperature}"
+                        f"&field2={humidity}"
+                        f"&field3={pressure}"
+                    )
+                response = None
+                try:
+                    response = urequests.post(
+                         
+                        API_URL,
+                        data=body,
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                    )
+                except Exception as error:
+                                     print("Upload failed:", error)
+                finally:
+                    if response is not None:
+                        response.close()
 
             
 
@@ -142,7 +178,8 @@ def main():
         relay.value(0)
         oled.fill(0)
         oled.show()
-
+    finally:
+        wifi_utils.disconnect(wifi)
 
 if __name__ == "__main__":
     main()
