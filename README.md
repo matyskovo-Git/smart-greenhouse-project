@@ -94,3 +94,6 @@ flowchart TD
 ```
 
 ### Datasheety použitých komponent
+https://dratek.cz/docs/produkty/0/91/1469214547.pdf?_gl=1*nyfb3b*_up*MQ..*_gs*MQ..&gclid=CjwKCAiAq5rYBhB-EiwAhj1RdoQkxj2hzgVd5F5-xXEWCIOLdYoFOWIm_yEK7z2nehLjYpPXo5ZPFBoCGHEQAvD_BwE&gbraid=0AAAAACVG_Wd15X70Z68DzIOKZ2zymInWN
+https://dratek.cz/docs/produkty/1/1659/1500635991.pdf?_gl=1*9oh2xi*_up*MQ..*_gs*MQ..&gclid=CjwKCAiAq5rYBhB-EiwAhj1Rdqtv5iCG2Vo1G0R5iAwgykYOz8C4M5KL1Mt_63m5CYRQc9xTx7Q_7RoCf00QAvD_BwE&gbraid=0AAAAACVG_Wd15X70Z68DzIOKZ2zymInWN
+https://dratek.cz/docs/produkty/1/1551/1527497643.pdf?_gl=1*1vzanny*_up*MQ..*_gs*MQ..&gclid=CjwKCAiAq5rYBhB-EiwAhj1RdszrcM0BT8ajuVFm3U9bU3Ko4qbty54q9jzbfMM2_Z8wNNa1jcZmghoC3r0QAvD_BwE&gbraid=0AAAAACVG_WfRWlHZXofnJ3-tDcn3BGKvy
