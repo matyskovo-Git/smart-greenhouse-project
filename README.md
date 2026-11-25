@@ -79,18 +79,18 @@ Hystereze omezuje opakované spínání relé při malých změnách teploty kol
 flowchart TD
     USB["USB · 5 V"] --> PICO["Raspberry Pi Pico W"]
 
-    PICO -->|"SDA GP4 (6), SCL GP5 (7)"| BME["BME280 · I2C -> 0x76"]
-    PICO -->|"SDA GP4 (6), SCL GP5 (7)"| OLED["OLED SH1106 · I2C -> 0x3C"]
-    PICO ---|"CLK GP10 (14), DT GP11 (15), SW GP12 (16)"| ENC["Enkodér"]
-    PICO -->|"IN GP27 (32)"| RELAY["Reléový modul"]
+    PICO -->|"SDA GP4, SCL GP5 "| BME["BME280 · I2C -> 0x76"]
+    PICO -->|"SDA GP4, SCL GP5 "| OLED["OLED SH1106 · I2C -> 0x3C"]
+    PICO ---|"CLK GP10, DT GP11, SW GP12 "| ENC["Enkodér"]
+    PICO -->|"IN GP27 "| RELAY["Reléový modul"]
 
-    BME --- BMESUP["VCC ← 3V3 OUT (36), GND ← GND (38)"]
-    OLED --- OLEDSUP["VCC ← 3V3 OUT (36), GND ← GND (38)"]
-    ENC --- ENCSUP["VCC ← 3V3 OUT (36), GND ← GND (38)"]
-    RELAY --- RELAYSUP["VCC a COM ← VBUS (40), GND ← GND (38)"]
+    BME --- BMESUP["VCC ← 3V3 OUT, GND ← GND "]
+    OLED --- OLEDSUP["VCC ← 3V3 OUT, GND ← GND "]
+    ENC --- ENCSUP["VCC ← 3V3 OUT, GND ← GND "]
+    RELAY --- RELAYSUP["VCC a COM ← VBUS, GND ← GND "]
 
     RELAY -->|"NO → ventilátor +"| FAN["5V ventilátor"]
-    FAN --- FANSUP["Napájení přes relé z VBUS (40), ventilátor − → GND (38)"]
+    FAN --- FANSUP["Napájení přes relé z VBUS, ventilátor → GND "]
 ```
 
 ### Datasheety použitých komponent
